@@ -1,0 +1,15 @@
+kind: CronJob
+metadata:
+  name: dask-worker-cull
+  namespace: jupyterhub
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: jupyterlab-sa
+          containers:
+          - name: dask-worker-cull
+            image: costrouc/dask-worker-cull:latest
+          restartPolicy: OnFailure
