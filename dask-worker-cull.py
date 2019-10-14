@@ -6,13 +6,13 @@ kubernetes.config.load_incluster_config()
 
 def list_pods():
     api_client = kubernetes.client.CoreV1Api()
-    response = v1.list_pod_for_all_namespaces(watch=False)
+    response = api_client.list_pod_for_all_namespaces(watch=False)
     return [{'name': pod.metadata.name, 'namespace': pod.metadata.namespace, 'status': pod.status.phase} for pod in response.items]
 
 
 def delete_pod(name, namespace):
     api_client = kubernetes.client.CoreV1Api()
-    response = api_client.delete_namespaced_pod(name, namespace, body=client.V1DeleteOptions())
+    response = api_client.delete_namespaced_pod(name, namespace, body=kubernetes.client.V1DeleteOptions())
     return response
 
 
