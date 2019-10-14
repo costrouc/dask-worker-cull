@@ -3,7 +3,7 @@ metadata:
   name: dask-worker-cull
   namespace: jupyterhub
 spec:
-  schedule: "*/10 * * * *"
+  schedule: "*/5 * * * *"
   jobTemplate:
     spec:
       template:
@@ -11,5 +11,5 @@ spec:
           serviceAccountName: jupyterlab-sa
           containers:
           - name: dask-worker-cull
-            image: costrouc/dask-worker-cull:latest
+            image: costrouc/dask-worker-cull:0.1
           restartPolicy: OnFailure
