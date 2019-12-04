@@ -1,15 +1,21 @@
+import sys
 import logging
 import argparse
 
 import kubernetes
+from kubernetes.config import ConfigException
 
 
-kubernetes.config.load_incluster_config()
+try:
+    kubernetes.config.load_incluster_config()
+except ConfigException:
+    kubernetes.config.load_kube_config()
 
 
-def list_pods():
+
+def list_pods(namespace):
     api_client = kubernetes.client.CoreV1Api()
-    response = api_client.list_pod_for_all_namespaces(watch=False)
+    response = api_client.list_namespaced_pod(namespace=namespace)
     return [{'name': pod.metadata.name, 'namespace': pod.metadata.namespace, 'status': pod.status.phase} for pod in response.items]
 
 
@@ -19,14 +25,15 @@ def delete_pod(name, namespace):
     return response
 
 
-def cull_workers(dry_run=False):
+def cull_workers(namespace, dry_run=False):
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('dask-worker-cull')
 
     if dry_run:
         logger.info(f'dry run flag enabled')
 
-    pods = list_pods()
+    logger.info(f'Operating in namespace {namespace}')
+    pods = list_pods(namespace)
     active_sessions = [pod for pod in pods if pod['name'].startswith('jupyter-')]
     usernames = [pod['name'][len('jupyter-'):] for pod in active_sessions]
     logger.info(f'{len(usernames)} active usernames: {usernames}')
@@ -48,12 +55,30 @@ def cull_workers(dry_run=False):
         if not dry_run:
             delete_pod(ghost_worker['name'], ghost_worker['namespace'])
 
+def get_current_namespace():
+    try:
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return None
 
 def cli():
     parser = argparse.ArgumentParser(description='Dask worker culling')
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument(
+        '--namespace',
+        help='Namespace to cull dask workers from'
+    )
     args = parser.parse_args()
-    cull_workers(dry_run=args.dry_run)
+
+    if not args.namespace:
+        namespace = get_current_namespace()
+        if namespace is None:
+            print("Could not autodetect namespace to operate in, please specify with --namespace", file=sys.stderr)
+            sys.exit(1)
+    else:
+        namespace = args.namespace
+    cull_workers(namespace=namespace, dry_run=args.dry_run)
 
 
 def main():
