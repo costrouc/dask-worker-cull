@@ -11,5 +11,8 @@ spec:
           serviceAccountName: jupyterlab-sa
           containers:
           - name: dask-worker-cull
-            image: costrouc/dask-worker-cull:0.1
+            image: costrouc/dask-worker-cull:0.4
+            args:
+              - "--namespace"
+              - "jupyterhub"
           restartPolicy: OnFailure
